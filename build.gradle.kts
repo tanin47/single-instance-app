@@ -215,22 +215,9 @@ tasks.register("jlink") {
     }
 }
 
-tasks.register("prepareInfoPlist") {
-    onlyIf { currentOS == OS.MAC }
-    doLast {
-        val template = layout.projectDirectory.file("mac-resources/Info.plist.template").asFile.readText()
-        val content = template
-            .replace("{{VERSION}}", version.toString())
-            .replace("{{INTERNAL_VERSION}}", "1")
-            .replace("{{PACKAGE_IDENTIFIER}}", "tanin.singleinstancedeeplink")
-            .replace("{{APP_NAME}}", appName)
-
-        layout.projectDirectory.file("mac-resources/Info.plist").asFile.writeText(content)
-    }
-}
 
 tasks.register("jpackage") {
-    dependsOn("jlink", "prepareInfoPlist")
+    dependsOn("jlink")
     val javaHome = System.getProperty("java.home")
     val jpackageBin = Paths.get(javaHome, "bin", "jpackage")
 
@@ -240,9 +227,7 @@ tasks.register("jpackage") {
     inputs.files(runtimeImage, modulePath)
 
     val outputDir = layout.buildDirectory.dir("jpackage")
-    val outputFile = if (currentOS == OS.MAC) {
-        outputDir.get().asFile.resolve("${appName}-$version.dmg")
-    } else if (currentOS == OS.WINDOWS) {
+    val outputFile = if (currentOS == OS.WINDOWS) {
         outputDir.get().asFile.resolve("${appName}-$version.msi")
     } else {
         throw Exception("Unsupported OS: $currentOS")
@@ -264,13 +249,7 @@ tasks.register("jpackage") {
             "--copyright", "2025 Tanin Na Nakorn",
         )
 
-        val platformSpecificArgs = if (currentOS == OS.MAC) {
-            listOf(
-                "--mac-package-identifier", "tanin.singleinstancedeeplink",
-                "--mac-package-name", appName,
-                "--resource-dir", layout.projectDirectory.dir("mac-resources").asFile.absolutePath,
-            )
-        } else if (currentOS == OS.WINDOWS) {
+        val platformSpecificArgs = if (currentOS == OS.WINDOWS) {
             listOf(
                 "--type", "msi",
                 "--win-menu",
